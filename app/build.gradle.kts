@@ -9,11 +9,11 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.mugarutv"
+        applicationId = "id.sch.smapjsidoarjo.tv"
         minSdk = 24
         targetSdk = 35
-        versionCode = 3
-        versionName = "1.2.1"
+        versionCode = 1
+        versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -84,7 +84,6 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
     implementation(libs.coil.compose)
-    implementation("com.google.android.gms:play-services-ads:23.6.0")
     implementation("androidx.work:work-runtime-ktx:2.9.1")
     coreLibraryDesugaring(libs.desugar.jdk.libs)
 

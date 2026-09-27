@@ -3,6 +3,9 @@ package com.mugarutv.data.repository
 import android.util.Log
 import com.mugarutv.data.model.Song
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.OutputStreamWriter
@@ -13,8 +16,9 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import java.util.Date
 import java.util.TimeZone
+import javax.xml.parsers.DocumentBuilderFactory
 
-private const val SONGS_ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbwUGcDFcWOLLmgoY9hqXPA0h4kKGj9bhFPGKBI_AwruSEMys3JMyn_vsMHzgA0vxUms/exec"
+private const val SONGS_ENDPOINT_URL = SCHOOL_APPS_SCRIPT_ENDPOINT
 
 class ApiSongRepository {
     private var cachedSongs: List<Song> = emptyList()
@@ -23,6 +27,7 @@ class ApiSongRepository {
 
     suspend fun fetchSongs(likeUserId: String? = null, forceRefresh: Boolean = false): Result<List<Song>> = withContext(Dispatchers.IO) {
         runCatching {
+            if (SONGS_ENDPOINT_URL.isBlank()) return@runCatching fetchSchoolChannelVideos()
             val now = System.currentTimeMillis()
             val normalizedLikeUserId = likeUserId?.trim().orEmpty().ifBlank { null }
             if (!forceRefresh && cachedSongs.isNotEmpty() && cachedLikeUserId == normalizedLikeUserId && now - lastFetchAtMs < CACHE_TTL_MS) {
@@ -54,8 +59,8 @@ class ApiSongRepository {
             connection.disconnect()
 
             if (body.trimStart().startsWith("<")) {
-                Log.w(TAG, "Backend returned HTML for songs; falling back to cache/empty list.")
-                return@runCatching cachedSongs
+                Log.w(TAG, "Backend returned HTML for songs; using school channel feed.")
+                return@runCatching fetchSchoolChannelVideos()
             }
 
             val root = JSONObject(body)
@@ -121,7 +126,7 @@ class ApiSongRepository {
                             alreadyLiked = item.optBoolean("already_liked", false),
                             artist = kategori.ifBlank { year.ifBlank { "Live" } },
                             genre = kategori.ifBlank { year.ifBlank { "Live" } },
-                            category = readString(item, "category", "genre"),
+                            category = kategori,
                             description = synopsis,
                             coverUrl = resolvedThumbnail,
                             movieUrl = resolvedYoutubeUrl,
@@ -141,17 +146,103 @@ class ApiSongRepository {
 
             Log.d(TAG, "Active films after status filter: $activeCount")
             Log.d(TAG, "Films after validation/dedupe/sort: ${songs.size}")
-            cachedSongs = songs
+            val channelVideos = runCatching { fetchSchoolChannelVideos() }.getOrDefault(emptyList())
+            val channelById = channelVideos.associateBy { it.videoId.ifBlank { it.id } }
+            val combinedSongs = (songs + channelVideos)
+                .groupBy { it.videoId.ifBlank { it.id } }
+                .map { (id, versions) ->
+                    val selected = versions.first()
+                    val fromChannel = channelById[id]
+                    selected.copy(channelCategories = (selected.channelCategories +
+                        listOfNotNull(selected.category.takeIf { it.isNotBlank() }) +
+                        fromChannel?.channelCategories.orEmpty()).distinct())
+                }
+                .sortedWith(compareByDescending<Song> { parseCreatedAtMillis(it.createdAt.ifBlank { it.uploadedAt }) }
+                    .thenBy { it.title.lowercase(Locale.US) })
+            cachedSongs = combinedSongs
             lastFetchAtMs = now
             cachedLikeUserId = normalizedLikeUserId
-            songs
+            combinedSongs
+        }.recoverCatching { error ->
+            Log.w(TAG, "School backend unavailable; using channel feed.", error)
+            fetchSchoolChannelVideos()
         }
     }
 
-    fun getGenres(songs: List<Song>): List<String> = listOf("Semua") + songs.map { it.category }.filter { it.isNotBlank() }.distinct().sorted()
+    fun getGenres(songs: List<Song>): List<String> = listOf("Semua") + songs.flatMap {
+        it.channelCategories.ifEmpty { listOf(it.category) }
+    }.filter { it.isNotBlank() }.distinct().sorted()
     fun getArtists(songs: List<Song>): List<String> = songs.map { it.year }.filter { it.isNotBlank() }.distinct().sortedDescending()
 
-    fun getFallbackSongs(): List<Song> = emptyList()
+    fun getFallbackSongs(): List<Song> = SCHOOL_YOUTUBE_CATALOG.map { item ->
+            val url = "https://www.youtube.com/watch?v=${item.id}"
+            val thumbnail = youtubeThumbnailUrl(item.id)
+            Song(id = item.id, title = item.title, year = item.publishedAt.take(4),
+                youtubeUrl = url, videoId = item.id, thumbnailUrl = thumbnail,
+                coverUrl = thumbnail, movieUrl = url, createdAt = item.publishedAt,
+                uploadedAt = item.publishedAt, status = "approved",
+                category = item.categories.firstOrNull() ?: "Video Channel",
+                channelCategories = item.categories.ifEmpty { listOf("Video Channel") })
+        }
+
+    private suspend fun fetchSchoolChannelVideos(): List<Song> = coroutineScope {
+        val sources = listOf("Video Terbaru" to "channel_id=$SCHOOL_YOUTUBE_CHANNEL_ID") +
+            SCHOOL_YOUTUBE_PLAYLISTS.map { (name, id) -> name to "playlist_id=$id" }
+        val batches = sources.map { (category, query) ->
+            async(Dispatchers.IO) {
+                runCatching { fetchYoutubeFeed(query, category) }
+                    .onFailure { Log.w(TAG, "YouTube feed $category gagal dimuat", it) }
+                    .getOrDefault(emptyList())
+            }
+        }.awaitAll()
+        val bundledVideos = getFallbackSongs()
+        val grouped = (batches.flatten() + bundledVideos).groupBy { it.videoId }
+        grouped.values.map { variants ->
+            val first = variants.first()
+            val allCategories = variants.flatMap { it.channelCategories.ifEmpty { listOf(it.category) } }.distinct()
+            val playlistCategories = allCategories.filter { it != "Video Terbaru" && it != "Video Channel" }
+            first.copy(category = playlistCategories.firstOrNull() ?: allCategories.firstOrNull().orEmpty(),
+                channelCategories = allCategories)
+        }.sortedWith(compareByDescending<Song> { parseCreatedAtMillis(it.createdAt) }
+            .thenBy { it.title.lowercase(Locale.US) })
+    }
+
+    private fun fetchYoutubeFeed(query: String, category: String): List<Song> {
+        val connection = (URL("https://www.youtube.com/feeds/videos.xml?$query")
+            .openConnection() as HttpURLConnection).apply {
+            connectTimeout = 8000
+            readTimeout = 8000
+        }
+        try {
+            if (connection.responseCode !in 200..299) throw IllegalStateException("Video sekolah gagal dimuat.")
+            val factory = DocumentBuilderFactory.newInstance().apply {
+                isNamespaceAware = true
+                setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+                setFeature("http://xml.org/sax/features/external-general-entities", false)
+                setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            }
+            val entries = factory.newDocumentBuilder().parse(connection.inputStream)
+                .getElementsByTagNameNS("http://www.w3.org/2005/Atom", "entry")
+            return (0 until entries.length).mapNotNull { index ->
+                val entry = entries.item(index) as? org.w3c.dom.Element ?: return@mapNotNull null
+                val videoId = entry.getElementsByTagNameNS("http://www.youtube.com/xml/schemas/2015", "videoId")
+                    .item(0)?.textContent.orEmpty()
+                val title = entry.getElementsByTagNameNS("http://www.w3.org/2005/Atom", "title")
+                    .item(0)?.textContent.orEmpty()
+                val published = entry.getElementsByTagNameNS("http://www.w3.org/2005/Atom", "published")
+                    .item(0)?.textContent.orEmpty()
+                if (videoId.isBlank() || title.isBlank()) return@mapNotNull null
+                val url = "https://www.youtube.com/watch?v=$videoId"
+                val thumbnail = "https://img.youtube.com/vi/$videoId/hqdefault.jpg"
+                Song(id = videoId, title = title, year = published.take(4), youtubeUrl = url,
+                    videoId = videoId, thumbnailUrl = thumbnail, coverUrl = thumbnail,
+                    movieUrl = url, createdAt = published, uploadedAt = published,
+                    status = "approved", category = category)
+            }
+        } finally {
+            connection.disconnect()
+        }
+    }
 
     suspend fun updateFilmLike(filmId: String, username: String): Result<FilmLikeResult> = withContext(Dispatchers.IO) {
         runCatching {

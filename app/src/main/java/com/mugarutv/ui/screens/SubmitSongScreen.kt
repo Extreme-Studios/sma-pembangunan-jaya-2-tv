@@ -78,7 +78,7 @@ fun SubmitSongScreen(
     var year by remember { mutableStateOf("") }
     var synopsis by remember { mutableStateOf("") }
     var youtubeUrl by remember { mutableStateOf("") }
-    var channelUrl by remember { mutableStateOf("https://www.youtube.com/@MUGARUTV") }
+    var channelUrl by remember { mutableStateOf("https://www.youtube.com/@smapembangunanjaya2sidoarj824") }
     var isLoading by remember { mutableStateOf(false) }
     var selectedCoverImage by remember { mutableStateOf<SelectedImagePayload?>(null) }
 
@@ -118,7 +118,7 @@ fun SubmitSongScreen(
     }
 
     fun clearChannelForm() {
-        channelUrl = "https://www.youtube.com/@MUGARUTV"
+        channelUrl = "https://www.youtube.com/@smapembangunanjaya2sidoarj824"
         fieldErrors.clear()
     }
 

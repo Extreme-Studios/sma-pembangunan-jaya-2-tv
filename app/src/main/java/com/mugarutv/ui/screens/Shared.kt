@@ -23,18 +23,18 @@ import androidx.compose.ui.res.painterResource
 import com.mugarutv.R
 
 @Composable
-fun MuhammadiyahBackground(modifier: Modifier = Modifier) {
+fun SchoolBackground(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.muhammadiyah_back),
+            painter = painterResource(id = R.drawable.school_tv_mark),
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth(0.7f)
                 .aspectRatio(1f),
-            alpha = 0.05f, // thin opacity so it does not interfere with content
+            alpha = 0.035f,
             contentScale = ContentScale.Fit
         )
     }

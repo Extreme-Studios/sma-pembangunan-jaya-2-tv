@@ -265,7 +265,7 @@ private class VrFrameRenderer : GLSurfaceView.Renderer {
             val status = IntArray(1)
             GLES20.glGetProgramiv(createdProgram, GLES20.GL_LINK_STATUS, status, 0)
             if (status[0] == 0) {
-                Log.e("MUGARU TVMUGARU TVVR", "Program link failed: ${GLES20.glGetProgramInfoLog(createdProgram)}")
+                Log.e("SmaPj2Vr", "Program link failed: ${GLES20.glGetProgramInfoLog(createdProgram)}")
                 GLES20.glDeleteProgram(createdProgram)
             }
         }
@@ -278,7 +278,7 @@ private class VrFrameRenderer : GLSurfaceView.Renderer {
             val status = IntArray(1)
             GLES20.glGetShaderiv(shader, GLES20.GL_COMPILE_STATUS, status, 0)
             if (status[0] == 0) {
-                Log.e("MUGARU TVMUGARU TVVR", "Shader compile failed: ${GLES20.glGetShaderInfoLog(shader)}")
+                Log.e("SmaPj2Vr", "Shader compile failed: ${GLES20.glGetShaderInfoLog(shader)}")
                 GLES20.glDeleteShader(shader)
             }
         }

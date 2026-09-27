@@ -16,9 +16,6 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.App.Starting"
         android:hardwareAccelerated="true">
-        <meta-data
-            android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-8451272966172172~2236096340" />
         <activity
             android:name=".MainActivity"
             android:configChanges="keyboardHidden|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"

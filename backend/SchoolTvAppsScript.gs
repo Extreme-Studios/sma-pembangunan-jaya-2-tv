@@ -1,4 +1,4 @@
-const SPREADSHEET_ID = "1kAUA6j-dM22n_I5PM1M2BoJjLOyzYyjMBXCo8KZfaTw";
+const SPREADSHEET_ID = "1bB0FVJIzffbhHIAXW7LspDdR1XNvKCPhUbnyC2UYBIs";
 
 const SHEET_ADMIN = "admin";
 const SHEET_FILMS = "video";
@@ -7,9 +7,9 @@ const SHEET_PORTAL_REPORTS = "portal_reports";
 const PORTAL_POST_EXPIRE_HOURS = 3;
 const ACTIVE_LIVE_STREAM_ID = "active_live_stream";
 
-const FILM_COVER_FOLDER_ID = "1nw4jJYkxXkdJWJp-7SGOk-6s2D2xJjNJ";
-const FILM_VIDEO_FOLDER_ID = "15ayDvO2ycd4rji5A0S9fGOWDSkEEwxKW";
-const PORTAL_POSTER_FOLDER_ID = "1okdmjF4TSWCeTolUVZi-7Cup1OlxqVda";
+const FILM_COVER_FOLDER_ID = "1sqBLSCOZw6fnk2EdMAm4wBzw23opaVJf";
+const FILM_VIDEO_FOLDER_ID = "1XV1h-CDoBH3hB3RSTAVxA2K2ttjbA2eq";
+const PORTAL_POSTER_FOLDER_ID = "1zFKrk3ShC7OrDIQ4jEBWCxxKLXgYuHm2";
 
 const ADMIN_HEADERS = [
   "username",
@@ -51,7 +51,7 @@ const PORTAL_REPORT_HEADERS = [
   "status"
 ];
 
-function setupMugaruTvSheets() {
+function setupSchoolTvSheets() {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const adminSheet = ensureAdminSheetWithDefaults_(ss);
   const filmsSheet = ensureSheetWithHeaders_(ss, SHEET_FILMS, FILM_HEADERS);
@@ -60,14 +60,14 @@ function setupMugaruTvSheets() {
 
   return {
     success: true,
-    message: "MUGARU TV sheets siap.",
+    message: "SMA PJ2 TV sheets siap.",
     sheets: [adminSheet.getName(), filmsSheet.getName(), portalSheet.getName(), reportsSheet.getName()]
   };
 }
 
 function doGet(e) {
   try {
-    setupMugaruTvSheets();
+    setupSchoolTvSheets();
     const type = String((e && e.parameter && e.parameter.type) || "").trim();
 
     if (type === "health") {
@@ -75,7 +75,7 @@ function doGet(e) {
     }
 
     if (type === "setup") {
-      return jsonOutput_(setupMugaruTvSheets());
+      return jsonOutput_(setupSchoolTvSheets());
     }
 
     if (type === "portal_posts") {
@@ -145,7 +145,7 @@ function healthCheck_() {
 function uploadHealthProbe_(folder) {
   const fileName = "health_probe_" + Date.now() + ".txt";
   const blob = Utilities.newBlob(
-    "MUGARU TV HEALTH CHECK " + new Date().toISOString(),
+    "SMA PJ2 TV HEALTH CHECK " + new Date().toISOString(),
     "text/plain",
     fileName
   );
@@ -161,7 +161,7 @@ function uploadHealthProbe_(folder) {
 
 function doPost(e) {
   try {
-    setupMugaruTvSheets();
+    setupSchoolTvSheets();
     const payload = JSON.parse((e && e.postData && e.postData.contents) || "{}");
     const type = String(payload.type || "").trim();
 
@@ -1786,7 +1786,7 @@ function ensureAdminSheetWithDefaults_(ss) {
       return String(row[0] || "").trim().toLowerCase() === "admin";
     });
     if (!hasDefaultAdmin) {
-      sheet.appendRow(["admin", "admin"]);
+      // Kredensial admin harus dibuat manual oleh pemilik Sheet.
     }
   }
   return sheet;

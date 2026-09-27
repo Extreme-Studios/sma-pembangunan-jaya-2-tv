@@ -37,6 +37,7 @@ import com.mugarutv.data.repository.ApiSongRepository
 import com.mugarutv.data.repository.PortalRepository
 import com.mugarutv.data.repository.PlaylistRepository
 import com.mugarutv.data.repository.SongRegistrationRepository
+import com.mugarutv.data.repository.SCHOOL_APPS_SCRIPT_ENDPOINT
 import com.mugarutv.ui.screens.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -50,7 +51,7 @@ sealed class AppScreen(val route: String, val label: String, val icon: ImageVect
 }
 
 @Composable
-fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
+fun MugaruTvApp(repository: ApiSongRepository = remember { ApiSongRepository() }) {
     val context = LocalContext.current
     val activity = context as? Activity
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -61,13 +62,11 @@ fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
     val portalSessionStore = remember { PortalSessionStore(context) }
     val portalSession by portalSessionStore.sessionFlow.collectAsState(initial = null)
 
-    val tabs = listOf(
-        AppScreen.Home,
-        AppScreen.Library,
-        AppScreen.Live,
-        AppScreen.PortalKita,
-        AppScreen.About
-    )
+    val tabs = if (SCHOOL_APPS_SCRIPT_ENDPOINT.isBlank()) {
+        listOf(AppScreen.Home, AppScreen.Library, AppScreen.Live, AppScreen.About)
+    } else {
+        listOf(AppScreen.Home, AppScreen.Library, AppScreen.Live, AppScreen.PortalKita, AppScreen.About)
+    }
     var currentTab by remember { mutableStateOf<AppScreen>(AppScreen.Home) }
     val tabHistory = remember { mutableStateListOf<AppScreen>().apply { add(AppScreen.Home) } }
     var selectedArtist by remember { mutableStateOf<String?>(null) }
@@ -79,8 +78,8 @@ fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
     var showRegistrationFromAbout by remember { mutableStateOf(false) }
     var uploadFormMode by remember { mutableStateOf(UploadFormMode.Video) }
     var returnToLibraryAfterLogin by remember { mutableStateOf(false) }
-    var songs by remember { mutableStateOf<List<Song>>(emptyList()) }
-    var isLoadingSongs by remember { mutableStateOf(true) }
+    var songs by remember { mutableStateOf(repository.getFallbackSongs()) }
+    var isLoadingSongs by remember { mutableStateOf(false) }
     var isRefreshingSongs by remember { mutableStateOf(false) }
     var songsError by remember { mutableStateOf<String?>(null) }
     val genres = remember(songs) { repository.getGenres(songs) }
@@ -90,7 +89,6 @@ fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
     var isLoadingPortal by remember { mutableStateOf(true) }
     var portalError by remember { mutableStateOf<String?>(null) }
     val portalCategories = remember { portalRepository.getCategories() }
-    val isInitialLoading = isLoadingSongs || isLoadingPortal
     val configuration = LocalConfiguration.current
     val isPlayerLandscapeFullscreen = playingMovie != null && configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
 
@@ -108,11 +106,8 @@ fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
         }
     }
 
-    fun openSong(song: Song) {
-        selectedMovie = song
-    }
-
     fun refreshSongs(showBlocking: Boolean) {
+        if (isRefreshingSongs) return
         scope.launch {
             if (showBlocking) isLoadingSongs = true else isRefreshingSongs = true
             val activeLikeUserId = portalSession?.username
@@ -124,6 +119,15 @@ fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
             }
             isLoadingSongs = false
             isRefreshingSongs = false
+        }
+    }
+
+    fun openSong(song: Song) {
+        selectedMovie = null
+        playingMovie = song
+        scope.launch {
+            repository.updateFilmView(song.id, song.youtubeUrl.ifBlank { song.movieUrl })
+            refreshSongs(false)
         }
     }
 
@@ -141,25 +145,9 @@ fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
     }
 
     LaunchedEffect(Unit) {
-        refreshSongs(showBlocking = true)
+        refreshSongs(showBlocking = false)
         refreshPortalPosts(showBlocking = true)
 
-        scope.launch {
-            try {
-                val prefs = context.getSharedPreferences("mugarutv_sync_prefs", android.content.Context.MODE_PRIVATE)
-                val lastSync = prefs.getLong("last_channel_sync_time", 0L)
-                val now = System.currentTimeMillis()
-                if (now - lastSync > 6 * 60 * 60 * 1000L) {
-                    val result = registrationRepository.importYoutubeChannel("https://www.youtube.com/@MUGARUTV")
-                    if (result.isSuccess) {
-                        prefs.edit().putLong("last_channel_sync_time", now).apply()
-                        refreshSongs(showBlocking = false)
-                    }
-                }
-            } catch (e: Exception) {
-                android.util.Log.e("MugaruTvApp", "Failed to sync channel: ${e.message}")
-            }
-        }
     }
 
     BackHandler {
@@ -390,62 +378,6 @@ fun MugaruTvApp(repository: ApiSongRepository = ApiSongRepository()) {
             }
         }
 
-        if (isInitialLoading) {
-            InitialLoadingOverlay()
-        }
     }
 }
-
-@Composable
-private fun InitialLoadingOverlay() {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    listOf(Color(0xFFF8FAFC), Color(0xFFF1F5F9), Color.White)
-                )
-            )
-    ) {
-        Column(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .padding(horizontal = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(84.dp)
-                    .background(Color.White, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(
-                    modifier = Modifier.size(42.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    strokeWidth = 4.dp
-                )
-            }
-
-            Spacer(modifier = Modifier.height(18.dp))
-
-            Text(
-                text = "Memuat konten...",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = "Menyiapkan video, informasi, dan data profil",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.Black.copy(alpha = 0.68f),
-                textAlign = TextAlign.Center
-            )
-        }
-    }
-}
-
 

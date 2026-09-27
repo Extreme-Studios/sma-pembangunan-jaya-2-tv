@@ -163,7 +163,7 @@ fun PortalKitaScreen(
                 }
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    text = "Ruang informasi dakwah, kegiatan sosial, dan video konten.",
+                    text = "Ruang informasi sekolah, karya siswa, dan kegiatan bersama.",
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -425,7 +425,7 @@ fun PortalPosterSubmissionScreen(
             if (!canPostPoster || resolvedSession == null) {
                 item {
                     Text(
-                        text = "Login MUGARU TV dulu untuk memasang informasi.",
+                        text = "Login SMA PJ2 TV dulu untuk memasang informasi.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -507,7 +507,7 @@ fun PortalPosterSubmissionScreen(
                                 val activeSession = resolvedSession
                                 if (activeSession == null || !activeSession.status.equals("ACTIVE", ignoreCase = true)) {
                                     isSubmitting = false
-                                    submitNotice = UiNotice("Login MUGARU TV dulu untuk memasang informasi.", UiNoticeType.WARNING)
+                                    submitNotice = UiNotice("Login SMA PJ2 TV dulu untuk memasang informasi.", UiNoticeType.WARNING)
                                     return@launch
                                 }
                                 val result = repository.submitPoster(

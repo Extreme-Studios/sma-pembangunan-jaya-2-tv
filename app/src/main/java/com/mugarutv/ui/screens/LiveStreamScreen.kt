@@ -108,7 +108,7 @@ fun LiveStreamListScreen(
                 .padding(paddingValues),
             contentAlignment = Alignment.TopCenter
         ) {
-            MuhammadiyahBackground()
+            SchoolBackground()
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -131,7 +131,7 @@ fun LiveStreamListScreen(
                                 .size(60.dp)
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(Color(0xFF4CAF50), Color(0xFF2E7D32))
+                                        listOf(Color(0xFFE71D2D), Color(0xFF292526))
                                     ),
                                     shape = RoundedCornerShape(16.dp)
                                 ),

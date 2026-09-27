@@ -1,7 +1,6 @@
 package com.mugarutv.ui.screens
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -12,16 +11,17 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.mugarutv.data.model.Playlist
 import com.mugarutv.data.model.Song
 import com.mugarutv.ui.components.SongListItem
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LibraryScreen(
     songs: List<Song>,
@@ -43,15 +43,15 @@ fun LibraryScreen(
     var selectedGenre by remember { mutableStateOf("Semua") }
     var songToAdd by remember { mutableStateOf<Song?>(null) }
     val listState = rememberLazyListState()
-    val dragAccum = remember { floatArrayOf(0f) }
     
     val filteredSongs = songs.filter { song ->
         val matchesQuery = query.isBlank() ||
             song.title.contains(query, true) ||
             song.year.contains(query, true) ||
             song.synopsis.contains(query, true) ||
-            song.category.contains(query, true)
-        val matchesGenre = selectedGenre == "Semua" || song.category.equals(selectedGenre, ignoreCase = true)
+            song.category.contains(query, true) || song.channelCategories.any { it.contains(query, true) }
+        val matchesGenre = selectedGenre == "Semua" || song.category.equals(selectedGenre, ignoreCase = true) ||
+            song.channelCategories.any { it.equals(selectedGenre, ignoreCase = true) }
         matchesQuery && matchesGenre
     }
 
@@ -106,29 +106,17 @@ fun LibraryScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            MuhammadiyahBackground()
+            SchoolBackground()
             LazyColumn(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(isRefreshing) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            val atTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                            if (!isRefreshing && atTop && dragAmount > 0f) {
-                                dragAccum[0] += dragAmount
-                                if (dragAccum[0] > 150f) {
-                                    dragAccum[0] = 0f
-                                    onRefresh()
-                                }
-                            } else if (dragAmount < 0f) {
-                                dragAccum[0] = 0f
-                            }
-                        }
-                    },
+                    .fillMaxSize(),
                 state = listState,
                 contentPadding = PaddingValues(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)

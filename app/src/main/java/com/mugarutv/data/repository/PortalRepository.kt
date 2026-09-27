@@ -16,9 +16,9 @@ import org.json.JSONObject
 class PortalRepository {
     fun getCategories(): List<String> = listOf(
         "All",
-        "Dakwah",
-        "Kegiatan Sosial",
-        "Video Konten"
+        "Kegiatan Sekolah",
+        "Prestasi",
+        "Karya Siswa"
     )
 
     fun getSubmissionCategories(): List<String> = getCategories().filter { it != "All" }
@@ -137,14 +137,14 @@ class PortalRepository {
                     when {
                         status.equals("PENDING", ignoreCase = true) -> "Registrasi Anda masih menunggu approval admin."
                         status.equals("BLOCKED", ignoreCase = true) -> "Akun Anda diblokir admin."
-                        else -> "Akun MUGARU TV belum aktif."
+                        else -> "Akun SMA PJ2 TV belum aktif."
                     }
                 )
             }
             Log.d("HubAuth", "login accepted reason=status_ACTIVE username=${account.username}")
             account
         }.recoverCatching {
-            throw IllegalStateException(it.message ?: "Gagal login MUGARU TV.")
+            throw IllegalStateException(it.message ?: "Gagal login SMA PJ2 TV.")
         }
     }
 
@@ -154,12 +154,13 @@ class PortalRepository {
         runCatching {
             requestHubAccount(type = "hub_check_status", whatsappRaw = whatsappRaw)
         }.recoverCatching {
-            throw IllegalStateException(it.message ?: "Gagal mengecek status MUGARU TV.")
+            throw IllegalStateException(it.message ?: "Gagal mengecek status SMA PJ2 TV.")
         }
     }
 
     suspend fun fetchActivePosts(): Result<List<PortalPost>> = withContext(Dispatchers.IO) {
         runCatching {
+            if (GOOGLE_APPS_SCRIPT_ENDPOINT.isBlank()) return@runCatching emptyList<PortalPost>()
             val requestUrl = "$GOOGLE_APPS_SCRIPT_ENDPOINT?type=portal_posts&ts=${System.currentTimeMillis()}"
             val connection = (URL(requestUrl).openConnection() as HttpURLConnection).apply {
                 requestMethod = "GET"
@@ -375,16 +376,16 @@ class PortalRepository {
             throw IllegalStateException(
                 response.optString("message").ifBlank {
                     when (type) {
-                        "hub_login" -> "Gagal login MUGARU TV."
-                        "hub_check_status" -> "Info akun MUGARU TV tidak ditemukan."
-                        else -> "Gagal mengecek status MUGARU TV."
+                        "hub_login" -> "Gagal login SMA PJ2 TV."
+                        "hub_check_status" -> "Info akun SMA PJ2 TV tidak ditemukan."
+                        else -> "Gagal mengecek status SMA PJ2 TV."
                     }
                 }
             )
         }
 
         val user = response.optJSONObject("user")
-            ?: throw IllegalStateException("Info akun MUGARU TV tidak ditemukan.")
+            ?: throw IllegalStateException("Info akun SMA PJ2 TV tidak ditemukan.")
         val normalizedStatus = normalizeHubStatus(user.optString("status"))
         val parsedUserId = parseHubUserId(user, normalizedStatus)
         Log.d("HubAuth", "parsed user id=$parsedUserId")
@@ -416,8 +417,7 @@ class PortalRepository {
     }
 
     companion object {
-        private const val GOOGLE_APPS_SCRIPT_ENDPOINT =
-            "https://script.google.com/macros/s/AKfycbwUGcDFcWOLLmgoY9hqXPA0h4kKGj9bhFPGKBI_AwruSEMys3JMyn_vsMHzgA0vxUms/exec"
+        private const val GOOGLE_APPS_SCRIPT_ENDPOINT = SCHOOL_APPS_SCRIPT_ENDPOINT
     }
 }
 

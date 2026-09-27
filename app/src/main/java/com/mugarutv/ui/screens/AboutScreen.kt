@@ -18,7 +18,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -30,12 +32,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mugarutv.data.local.PortalSessionStore
 import com.mugarutv.data.model.PortalUserSession
 import com.mugarutv.data.repository.PortalRepository
+import com.mugarutv.data.repository.SCHOOL_APPS_SCRIPT_ENDPOINT
 import com.mugarutv.ui.HUB_LOGIN_REWARD_COOLDOWN_KEY
 import com.mugarutv.ui.HUB_REGISTER_REWARD_COOLDOWN_KEY
 import com.mugarutv.ui.PORTAL_REWARD_COOLDOWN_MS
 import com.mugarutv.ui.PORTAL_REWARD_PREFERENCE_NAME
 import com.mugarutv.ui.REWARD_AD_UNIT_ID
 import com.mugarutv.ui.rememberRewardedSubmissionGate
+import com.mugarutv.R
+import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -85,39 +90,22 @@ fun AboutScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            MuhammadiyahBackground()
+            SchoolBackground()
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(24.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 item {
-                    AboutHeader(onHeaderClick = { showHubLoginDialog = true })
-                }
-
-                item {
-                    AdminPanel(
-                        isHubActive = isHubActive,
-                        username = portalSession?.username.orEmpty(),
-                        onLoginClick = { showHubLoginDialog = true },
-                        onUploadVideoClick = onOpenRegistration,
-                        onUploadChannelClick = onOpenChannelUpload,
-                        onEditCredentialClick = {
-                            newUsername = portalSession?.username.orEmpty()
-                            newPassword = ""
-                            credentialMessage = null
-                            showCredentialDialog = true
-                        },
-                        onLogoutClick = { showLogoutConfirmDialog = true }
-                    )
+                    AboutHeader(onHeaderClick = {})
                 }
 
                 item {
                     SectionHeaderTitle("Panduan Pengajuan")
                     Spacer(Modifier.height(12.dp))
-                    GuidelineItem(Icons.Default.CheckCircle, "Konten Dakwah", "Materi yang dikirim mendukung dakwah, edukasi, atau kegiatan sosial MUGARU TV.")
+                    GuidelineItem(Icons.Default.CheckCircle, "Konten Sekolah", "Materi yang dikirim berkaitan dengan kegiatan, pembelajaran, atau prestasi SMA Pembangunan Jaya 2 Sidoarjo.")
                     GuidelineItem(Icons.Default.Lock, "Hak Cipta", "Tidak melanggar hak cipta musik, video, atau materi pihak ketiga.")
-                    GuidelineItem(Icons.Default.Done, "Izin Tayang", "Memberikan izin penayangan di platform MUGARU TV.")
+                    GuidelineItem(Icons.Default.Done, "Izin Tayang", "Memberikan izin penayangan di SMA PJ2 TV.")
                 }
 
                 item {
@@ -129,7 +117,7 @@ fun AboutScreen(
                             Icon(Icons.Default.Notifications, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(16.dp))
                             Text(
-                                "Kami mendukung dakwah, kegiatan sosial, dan penyebaran manfaat melalui media digital yang positif.",
+                                "Ruang digital untuk karya siswa, kegiatan sekolah, dan kabar dari Yayasan Pendidikan Jaya.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer
                             )
@@ -455,8 +443,9 @@ private fun AboutHeader(onHeaderClick: () -> Unit = {}) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
-                .size(80.dp)
-                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                .width(260.dp)
+                .height(90.dp)
+                .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp))
                 .clickable {
                     tapCount++
                     if (tapCount >= 7) {
@@ -466,7 +455,14 @@ private fun AboutHeader(onHeaderClick: () -> Unit = {}) {
                 },
             contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(40.dp), tint = MaterialTheme.colorScheme.primary)
+            AsyncImage(
+                model = "https://spj.sch.id/uploads/frontend/images/logo9.png",
+                contentDescription = "Logo SMA Pembangunan Jaya 2 Sidoarjo",
+                placeholder = painterResource(R.drawable.school_tv_mark),
+                error = painterResource(R.drawable.school_tv_mark),
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize()
+            )
         }
         Spacer(Modifier.height(16.dp))
         Text(
@@ -477,7 +473,7 @@ private fun AboutHeader(onHeaderClick: () -> Unit = {}) {
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "MUGARU TV adalah platform dakwah, dokumentasi kegiatan sosial, dan publikasi konten bermanfaat dari MUGARU TV.",
+            "SMA PJ2 TV menyajikan kegiatan, karya, dan prestasi SMA Pembangunan Jaya 2 Sidoarjo di bawah Yayasan Pendidikan Jaya.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant

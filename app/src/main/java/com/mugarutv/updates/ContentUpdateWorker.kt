@@ -1,4 +1,4 @@
-﻿package com.mugarutv.updates
+package com.mugarutv.updates
 
 import android.Manifest
 import android.app.NotificationChannel
@@ -50,8 +50,8 @@ class ContentUpdateWorker(
             if (latestVideoId.isNotBlank() && latestVideoId != lastVideoId) {
                 notify(
                     notificationId = VIDEO_NOTIFICATION_ID,
-                    title = "Live Baru Tersedia",
-                    text = "Ada live baru di MUGARU TV."
+                    title = "Video Baru Tersedia",
+                    text = "Ada video baru di SMA PJ2 TV."
                 )
             }
 
@@ -94,7 +94,7 @@ class ContentUpdateWorker(
         )
 
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-            .setSmallIcon(R.mipmap.ic_launcher)
+            .setSmallIcon(R.drawable.school_tv_mark)
             .setContentTitle(title)
             .setContentText(text)
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)

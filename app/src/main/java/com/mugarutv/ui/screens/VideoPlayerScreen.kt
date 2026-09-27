@@ -1,8 +1,6 @@
 package com.mugarutv.ui.screens
 
 import android.app.Activity
-import android.content.Intent
-import android.net.Uri
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
@@ -10,6 +8,7 @@ import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import com.mugarutv.BuildConfig
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +60,8 @@ private fun extractYoutubeVideoId(url: String): String? {
     if (longMatch != null) return longMatch.groupValues[1]
     val embedMatch = Regex("/embed/([A-Za-z0-9_-]{11})").find(trimmed)
     if (embedMatch != null) return embedMatch.groupValues[1]
+    val shortsMatch = Regex("/shorts/([A-Za-z0-9_-]{11})").find(trimmed)
+    if (shortsMatch != null) return shortsMatch.groupValues[1]
     return null
 }
 
@@ -170,24 +171,14 @@ fun VideoPlayerScreen(
                                     color = Color.White,
                                     fontWeight = FontWeight.SemiBold
                                 )
-                                Button(
-                                    onClick = { openExternalUrl(context, liveUrl) },
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    ),
-                                    enabled = liveUrl.isNotBlank()
-                                ) {
-                                    Text("Buka di Browser")
-                                }
+                                Text("Video ini belum dapat diputar di dalam aplikasi.", color = Color.White)
                             }
                         }
                     }
                 }
             }
 
-            // Description + open link section (portrait)
-            if (description.isNotBlank() || liveUrl.isNotBlank()) {
+            if (description.isNotBlank()) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -200,17 +191,6 @@ fun VideoPlayerScreen(
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
-                    }
-                    if (liveUrl.isNotBlank()) {
-                        Button(
-                            onClick = { openExternalUrl(context, liveUrl) },
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        ) {
-                            Text("Buka di YouTube")
-                        }
                     }
                     Spacer(Modifier.height(2.dp))
                 }
@@ -229,11 +209,15 @@ private fun YoutubeWebViewContent(
 ) {
     if (liveUrl.isBlank()) return
 
-    // Target URL: YouTube mobile page (works for all videos, no embed restrictions)
+    // Official YouTube embed stays inside this WebView. Some owners disable embedding.
     val targetUrl = if (youtubeVideoId != null)
-        "https://m.youtube.com/watch?v=$youtubeVideoId"
+        "https://www.youtube.com/embed/$youtubeVideoId?autoplay=1&playsinline=1&rel=0"
     else
-        liveUrl
+        ""
+    if (targetUrl.isBlank()) {
+        LaunchedEffect(liveUrl) { onError("Link YouTube tidak valid untuk pemutar aplikasi.") }
+        return
+    }
 
     AndroidView(
         modifier = modifier,
@@ -249,10 +233,7 @@ private fun YoutubeWebViewContent(
                 settings.useWideViewPort = true
                 settings.loadWithOverviewMode = true
                 settings.setSupportZoom(false)
-                settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                // Mobile Chrome UA so YouTube serves correct mobile player
-                settings.userAgentString =
-                    "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
+                settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
 
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(
@@ -261,12 +242,11 @@ private fun YoutubeWebViewContent(
                     ): Boolean {
                         val url = request?.url?.toString().orEmpty()
                         if (url.isBlank()) return false
-                        val scheme = Uri.parse(url).scheme.orEmpty().lowercase()
-                        if (scheme.isNotBlank() && scheme != "http" && scheme != "https") {
-                            openExternalUrl(viewContext, url)
-                            return true
-                        }
-                        return false
+                        if (request?.isForMainFrame != true) return false
+                        val parsedUrl = android.net.Uri.parse(url)
+                        return parsedUrl.scheme != "https" ||
+                            parsedUrl.host != "www.youtube.com" ||
+                            parsedUrl.path != "/embed/$youtubeVideoId"
                     }
 
                     override fun onPageFinished(view: WebView?, url: String?) {
@@ -328,20 +308,10 @@ private fun YoutubeWebViewContent(
                     }
                 }
 
-                loadUrl(targetUrl)
+                // Android WebView does not send an identity Referer by default.
+                loadUrl(targetUrl, mapOf("Referer" to "https://${BuildConfig.APPLICATION_ID}/"))
             }
         },
         update = { /* no-op: URL set in factory */ }
     )
-}
-
-private fun openExternalUrl(context: android.content.Context, url: String) {
-    if (url.isBlank()) return
-    runCatching {
-        context.startActivity(
-            Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-        )
-    }
 }

@@ -12,7 +12,7 @@ import java.nio.charset.StandardCharsets
 
 class SongRegistrationRepository {
     companion object {
-        const val GOOGLE_APPS_SCRIPT_ENDPOINT = "https://script.google.com/macros/s/AKfycbwUGcDFcWOLLmgoY9hqXPA0h4kKGj9bhFPGKBI_AwruSEMys3JMyn_vsMHzgA0vxUms/exec"
+        const val GOOGLE_APPS_SCRIPT_ENDPOINT = SCHOOL_APPS_SCRIPT_ENDPOINT
         private const val NETWORK_TIMEOUT_MS = 90_000
     }
 

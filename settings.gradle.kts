@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "MUGARU TV"
+rootProject.name = "SMA Pembangunan Jaya 2 TV"
 include(":app")

@@ -90,7 +90,7 @@ class PlaybackNotificationService : Service() {
 
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle(currentTitle.ifBlank { "MUGARU TV" })
+            .setContentTitle(currentTitle.ifBlank { "SMA PJ2 TV" })
             .setContentText(currentArtist.ifBlank { "Playback dummy" })
             .setOngoing(isPlaying)
             .setOnlyAlertOnce(true)

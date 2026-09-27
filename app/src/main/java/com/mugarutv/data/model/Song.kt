@@ -16,6 +16,7 @@ data class Song(
     val artist: String = "",
     val genre: String = "",
     val category: String = "",
+    val channelCategories: List<String> = emptyList(),
     val duration: String = "",
     val director: String = "",
     val castName: String = "",

@@ -1,4 +1,4 @@
-﻿package com.mugarutv
+package com.mugarutv
 
 import android.app.Application
 import com.mugarutv.updates.ContentUpdateScheduler

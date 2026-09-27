@@ -1,4 +1,4 @@
-﻿package com.mugarutv.updates
+package com.mugarutv.updates
 
 import android.content.Context
 import androidx.work.Constraints

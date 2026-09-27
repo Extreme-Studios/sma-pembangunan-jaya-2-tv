@@ -40,12 +40,12 @@ import com.mugarutv.R
 import com.mugarutv.data.model.Song
 import kotlin.math.abs
 
-private val ProfessionalBlueBrushes = listOf(
-    Brush.verticalGradient(listOf(Color(0xFF0F4C81), Color(0xFF0A3358))),
-    Brush.verticalGradient(listOf(Color(0xFF1E3A8A), Color(0xFF0F172A))),
-    Brush.verticalGradient(listOf(Color(0xFF2563EB), Color(0xFF1E40AF))),
-    Brush.verticalGradient(listOf(Color(0xFF0F4C81), Color(0xFFF59E0B))),
-    Brush.verticalGradient(listOf(Color(0xFF1D4ED8), Color(0xFF1E3A8A)))
+private val SchoolPosterBrushes = listOf(
+    Brush.verticalGradient(listOf(Color(0xFFE71D2D), Color(0xFF292526))),
+    Brush.verticalGradient(listOf(Color(0xFFBB1725), Color(0xFF292526))),
+    Brush.verticalGradient(listOf(Color(0xFF4B4546), Color(0xFF292526))),
+    Brush.verticalGradient(listOf(Color(0xFFE71D2D), Color(0xFF8E1420))),
+    Brush.verticalGradient(listOf(Color(0xFF6A111A), Color(0xFF292526)))
 )
 
 @Composable
@@ -172,7 +172,7 @@ fun SongCover(
     contentScale: ContentScale = ContentScale.Crop
 ) {
     val shape = RoundedCornerShape(8.dp)
-    val fallbackPainter = painterResource(id = R.drawable.splash)
+    val fallbackPainter = painterResource(id = R.drawable.school_tv_mark)
     val safeCoverUrl = song.thumbnailUrl.ifBlank { song.coverUrl }
     val imageModelUrl = safeCoverUrl.toDisplayImageUrl()
     val isRemoteUrl = imageModelUrl.startsWith("http", ignoreCase = true)
@@ -217,8 +217,8 @@ fun SongCover(
 }
 
 private fun Song.professionalBrush(): Brush {
-    val index = abs(id.hashCode()) % ProfessionalBlueBrushes.size
-    return ProfessionalBlueBrushes[index]
+    val index = abs(id.hashCode()) % SchoolPosterBrushes.size
+    return SchoolPosterBrushes[index]
 }
 
 private fun String.toDisplayImageUrl(): String {

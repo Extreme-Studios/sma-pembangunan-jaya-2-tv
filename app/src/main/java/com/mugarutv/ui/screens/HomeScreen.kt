@@ -2,7 +2,6 @@ package com.mugarutv.ui.screens
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -11,22 +10,25 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mugarutv.data.model.Song
+import com.mugarutv.R
 import com.mugarutv.ui.components.MoviePosterCard
 import com.mugarutv.ui.components.SongCover
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     songs: List<Song>,
@@ -40,39 +42,31 @@ fun HomeScreen(
     onArtistClick: (String) -> Unit
 ) {
     val listState = rememberLazyListState()
-    val dragAccum = remember { floatArrayOf(0f) }
     val featured = remember(songs) { songs.firstOrNull() }
     val newcomerMovies = remember(songs) { songs.take(8) }
-    val categories = remember(songs) { listOf("Semua") + songs.map { it.category }.filter { it.isNotBlank() }.distinct().sorted() }
+    val categories = remember(songs) { listOf("Semua") + songs.flatMap {
+        it.channelCategories.ifEmpty { listOf(it.category) }
+    }.filter { it.isNotBlank() }.distinct().sorted() }
     var selectedCategory by remember(songs) { mutableStateOf("Semua") }
     val filteredMovies = remember(songs, selectedCategory) {
-        if (selectedCategory == "Semua") songs else songs.filter { it.category.equals(selectedCategory, ignoreCase = true) }
+        if (selectedCategory == "Semua") songs else songs.filter {
+            it.category.equals(selectedCategory, ignoreCase = true) ||
+                it.channelCategories.any { category -> category.equals(selectedCategory, ignoreCase = true) }
+        }
     }
 
     Scaffold(
         topBar = { HomeTopBar() },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Box(
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = onRefresh,
             modifier = modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .pointerInput(isRefreshing) {
-                    detectVerticalDragGestures { _, dragAmount ->
-                        val atTop = listState.firstVisibleItemIndex == 0 && listState.firstVisibleItemScrollOffset == 0
-                        if (!isRefreshing && atTop && dragAmount > 0f) {
-                            dragAccum[0] += dragAmount
-                            if (dragAccum[0] > 150f) {
-                                dragAccum[0] = 0f
-                                onRefresh()
-                            }
-                        } else if (dragAmount < 0f) {
-                            dragAccum[0] = 0f
-                        }
-                    }
-                }
         ) {
-            MuhammadiyahBackground()
+            SchoolBackground()
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 state = listState,
@@ -116,7 +110,7 @@ fun HomeScreen(
                     }
 
                     item {
-                        SectionHeader(title = if (selectedCategory == "Semua") "Koleksi Live" else "Kategori: $selectedCategory")
+                        SectionHeader(title = if (selectedCategory == "Semua") "Video Sekolah" else "Kategori: $selectedCategory")
                     }
 
                     items(filteredMovies.chunked(2)) { pair ->
@@ -149,19 +143,27 @@ fun HomeScreen(
 private fun HomeTopBar() {
     TopAppBar(
         title = {
-            Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Icon(
+                    painter = painterResource(R.drawable.school_tv_mark),
+                    contentDescription = null,
+                    tint = Color.Unspecified,
+                    modifier = Modifier.size(34.dp)
+                )
+                Column(verticalArrangement = Arrangement.spacedBy(0.dp)) {
                 Text(
-                    "MUGARU TV",
+                    "SMA PJ2 TV",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
                 )
                 Text(
-                    "MUGARU TV",
+                    "Yayasan Pendidikan Jaya · Sidoarjo",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.SemiBold,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                }
             }
         },
         colors = TopAppBarDefaults.topAppBarColors(
@@ -179,12 +181,12 @@ private fun WelcomeSection() {
             .padding(horizontal = 20.dp, vertical = 16.dp)
     ) {
         Text(
-            text = "Assalamu'alaikum,",
+            text = "Halo, warga sekolah!",
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Text(
-            text = "Selamat Datang di MUGARU TV",
+            text = "Selamat datang di SMA PJ2 TV",
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface
@@ -234,13 +236,13 @@ private fun FeaturedHero(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Layanan Unggulan",
+                    text = "Cerita dari Sekolah",
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = featured?.title ?: "Menebar Kebaikan",
+                    text = featured?.title ?: "Belajar, Berkarya, Berprestasi",
                     color = MaterialTheme.colorScheme.onPrimary,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
@@ -249,6 +251,7 @@ private fun FeaturedHero(
                 Spacer(modifier = Modifier.height(12.dp))
                 Button(
                     onClick = onPlay,
+                    enabled = featured != null,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp),
                     shape = RoundedCornerShape(8.dp),
